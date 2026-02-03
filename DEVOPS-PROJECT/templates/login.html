@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>Login</h1>
+
+      {% if error %}
+        <div class="alert">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('login_post') }}" class="card">
+        <label>Username</label>
+        <input type="text" name="username" placeholder="admin / dev / ops" required />
+
+        <label>Password</label>
+        <input type="password" name="password" placeholder="admin123 / dev123 / ops123" required />
+
+        <button type="submit">Sign in</button>
+      </form>
+
+      <p class="hint">
+        Demo users:
+        <br>admin / admin123 (sysadmin)
+        <br>dev / dev123 (developer)
+        <br>ops / ops123 (devops)
+      </p>
+    </div>
+  </body>
+</html>

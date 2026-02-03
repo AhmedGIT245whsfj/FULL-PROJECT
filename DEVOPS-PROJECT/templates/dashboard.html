@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="topbar">
+        <div>
+          <h1>Dashboard</h1>
+          <div class="sub">
+            Welcome, <b>{{ username }}</b>
+            <span class="badge">{{ role_title }}</span>
+          </div>
+        </div>
+
+        <a class="link-btn" href="{{ url_for('logout') }}">Logout</a>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h2>{{ role_title }} Roadmap</h2>
+          <ul>
+            {% for item in roadmap %}
+              <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>Role Image</h2>
+          <img class="role-img"
+               src="{{ url_for('static', filename=image_path) }}"
+               alt="{{ role_title }}">
+          <p class="hint">Image path: static/{{ image_path }}</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
