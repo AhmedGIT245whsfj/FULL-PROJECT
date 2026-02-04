@@ -13,18 +13,26 @@ variable "aws_region" {
 variable "instance_type" {
   type        = string
   description = "EC2 instance type"
-  default     = "t3.micro" # خليها t2.micro عشان free tier في العادة
+  default     = "t3.micro"
 }
 
+# ✅ الحل الجذري: يمنع "yes" وأي قيم غلط
 variable "docker_image" {
   type        = string
-  description = "Docker image to deploy (passed from CI/CD), e.g. ahmeduioueu235g/myapp:1.0.1"
-  # ✅ مفيش default عشان GitHub Actions يبعت النسخة
+  description = "Docker image to deploy in form repo/image:tag (e.g. ahmeduioueu235g/myapp:latest)"
+
+  validation {
+    condition = (
+      length(trimspace(var.docker_image)) > 0 &&
+      can(regex("^[a-z0-9]+([._-][a-z0-9]+)*/[a-z0-9]+([._-][a-z0-9]+)*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$", trimspace(var.docker_image)))
+    )
+    error_message = "docker_image must be like 'repo/image:tag' (example: ahmeduioueu235g/myapp:latest)."
+  }
 }
 
 variable "container_name" {
   type        = string
-  description = "Docker container name on the EC2 instance"
+  description = "Docker container name"
   default     = "myapp"
 }
 
@@ -36,8 +44,8 @@ variable "container_port" {
 
 variable "app_port" {
   type        = number
-  description = "Port exposed on the EC2 instance"
-  default     = 9090
+  description = "Port exposed on EC2"
+  default     = 80
 }
 
 variable "key_name" {
@@ -48,13 +56,13 @@ variable "key_name" {
 
 variable "public_key_path" {
   type        = string
-  description = "Path to your SSH public key file (used when public_key is empty)"
+  description = "Path to your SSH public key file"
   default     = "~/.ssh/id_rsa.pub"
 }
 
 variable "public_key" {
   type        = string
-  description = "SSH public key content (preferred in CI); overrides public_key_path when set"
+  description = "SSH public key content (optional)"
   default     = ""
 
   validation {
@@ -71,6 +79,6 @@ variable "allow_ssh" {
 
 variable "ssh_cidr" {
   type        = string
-  description = "CIDR allowed to SSH (better: your_public_ip/32)"
+  description = "CIDR allowed to SSH"
   default     = "0.0.0.0/0"
 }

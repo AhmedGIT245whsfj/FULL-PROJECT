@@ -25,7 +25,7 @@ data "aws_ami" "ubuntu" {
 }
 
 locals {
-  public_key_value = trimspace(var.public_key) != "" ? trimspace(var.public_key) : file(pathexpand(var.public_key_path))
+  public_key_value = length(trimspace(var.public_key)) > 0 ? trimspace(var.public_key) : file(pathexpand(var.public_key_path))
 }
 
 resource "aws_key_pair" "deployer" {
@@ -77,38 +77,41 @@ resource "aws_instance" "app" {
   key_name                    = aws_key_pair.deployer.key_name
   associate_public_ip_address = true
 
-  # ✅ مهم جدًا للـ CD: لو docker_image اتغير، نعمل Replace للـ instance عشان user_data يتنفّذ من جديد
   user_data_replace_on_change = true
 
   user_data = <<-EOF
-    #!/bin/bash
-    set -e
+#!/bin/bash
+set -euxo pipefail
 
-    apt-get update -y
-    apt-get install -y ca-certificates curl gnupg lsb-release
+exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
 
-    install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    chmod a+r /etc/apt/keyrings/docker.gpg
+echo "[INFO] docker_image=${var.docker_image}"
+echo "[INFO] app_port=${var.app_port} container_port=${var.container_port} container_name=${var.container_name}"
 
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
-      > /etc/apt/sources.list.d/docker.list
+apt-get update -y
+apt-get install -y ca-certificates curl gnupg lsb-release
 
-    apt-get update -y
-    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
 
-    systemctl enable docker
-    systemctl start docker
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
 
-    docker pull ${var.docker_image}
-    docker rm -f ${var.container_name} || true
+apt-get update -y
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-    docker run -d \
-      --name ${var.container_name} \
-      --restart unless-stopped \
-      -p ${var.app_port}:${var.container_port} \
-      ${var.docker_image}
-  EOF
+systemctl enable --now docker
+
+for i in {1..30}; do
+  docker info >/dev/null 2>&1 && break || sleep 2
+done
+
+docker pull ${var.docker_image}
+docker rm -f ${var.container_name} || true
+docker run -d --name ${var.container_name} --restart unless-stopped -p ${var.app_port}:${var.container_port} ${var.docker_image}
+
+docker ps
+EOF
 
   tags = {
     Name = var.project_name
