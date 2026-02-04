@@ -1,13 +1,5 @@
-# Terraform (DO NOT COMMIT)
-**/.terraform/*
+.terraform/
 *.tfstate
 *.tfstate.*
 *.tfvars
 crash.log
-
-# Python
-__pycache__/
-*.pyc
-
-# OS
-.DS_Store

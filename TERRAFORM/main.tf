@@ -1,17 +1,3 @@
-terraform {
-  required_version = ">= 1.5.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 5.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = var.aws_region
-}
-
 data "aws_vpc" "default" {
   default = true
 }
@@ -25,7 +11,7 @@ data "aws_subnets" "default" {
 
 data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["099720109477"] # Canonical (Ubuntu)
+  owners      = ["099720109477"] # Canonical
 
   filter {
     name   = "name"
@@ -36,16 +22,15 @@ data "aws_ami" "ubuntu" {
     name   = "virtualization-type"
     values = ["hvm"]
   }
+}
 
-  filter {
-    name   = "root-device-type"
-    values = ["ebs"]
-  }
+locals {
+  public_key_value = trimspace(var.public_key) != "" ? trimspace(var.public_key) : file(pathexpand(var.public_key_path))
 }
 
 resource "aws_key_pair" "deployer" {
   key_name   = var.key_name
-  public_key = file(var.public_key_path)
+  public_key = local.public_key_value
 }
 
 resource "aws_security_group" "app_sg" {
@@ -91,6 +76,9 @@ resource "aws_instance" "app" {
   vpc_security_group_ids      = [aws_security_group.app_sg.id]
   key_name                    = aws_key_pair.deployer.key_name
   associate_public_ip_address = true
+
+  # ✅ مهم جدًا للـ CD: لو docker_image اتغير، نعمل Replace للـ instance عشان user_data يتنفّذ من جديد
+  user_data_replace_on_change = true
 
   user_data = <<-EOF
     #!/bin/bash
