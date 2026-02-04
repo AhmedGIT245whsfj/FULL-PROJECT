@@ -15,26 +15,38 @@
       background: linear-gradient(90deg, #38bdf8, #6366f1);
       padding: 18px 0;
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 20px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     ">
-      <h1 style="
-        margin: 0;
-        color: white;
-        font-size: 26px;
-        letter-spacing: 1px;
-      ">
+      <h1 style="margin:0;color:white;font-size:26px;">
         🚀 DevOps CD Live
       </h1>
-      <p style="
-        margin: 6px 0 0;
-        color: #e0f2fe;
-        font-size: 14px;
-      ">
+      <p style="margin:6px 0 0;color:#e0f2fe;font-size:14px;">
         Auto-deployed from GitHub Actions
       </p>
     </header>
     <!-- 🔥 END HEADER -->
+
+    <!-- 🚨 LIVE DEPLOY BANNER -->
+    <div style="
+      background: linear-gradient(90deg,#22c55e,#16a34a);
+      color: #052e16;
+      text-align: center;
+      padding: 10px;
+      font-weight: bold;
+      animation: pulse 2s infinite;
+      margin-bottom: 25px;
+    ">
+      ✅ LIVE DEPLOY SUCCESS — THIS CHANGE CAME FROM CD PIPELINE
+    </div>
+
+    <style>
+      @keyframes pulse {
+        0%   { opacity: 1; }
+        50%  { opacity: 0.6; }
+        100% { opacity: 1; }
+      }
+    </style>
 
     <div class="container">
       <div class="topbar">
@@ -68,5 +80,18 @@
         </div>
       </div>
     </div>
+
+    <!-- 🔻 FOOTER -->
+    <footer style="
+      margin-top: 40px;
+      padding: 14px;
+      text-align: center;
+      font-size: 13px;
+      color: #94a3b8;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    ">
+      🔁 Continuous Deployment Active | Built & Deployed Automatically
+    </footer>
+
   </body>
 </html>
