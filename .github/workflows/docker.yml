@@ -1,15 +1,22 @@
-name: Release (Build + Deploy)
+name: CD (Build + Deploy)
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
+
+concurrency:
+  group: cd-main
+  cancel-in-progress: true
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
+      version: ${{ steps.meta.outputs.version }}
+      image_to_deploy: ${{ steps.meta.outputs.image_to_deploy }}
 
     steps:
       - name: Checkout code
@@ -24,11 +31,32 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract version from tag
-        id: version
+      - name: Resolve image tags
+        id: meta
+        shell: bash
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          USER="${{ secrets.DOCKERHUB_USERNAME }}"
+          REPO="${USER}/myapp"
+
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            VERSION="${TAG#v}"
+            IMAGE_TO_DEPLOY="${REPO}:${VERSION}"
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "image_to_deploy=${IMAGE_TO_DEPLOY}" >> "$GITHUB_OUTPUT"
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "Resolved release image: ${IMAGE_TO_DEPLOY}"
+          else
+            SHORT_SHA="$(echo "${GITHUB_SHA}" | cut -c1-7)"
+            VERSION="sha-${SHORT_SHA}"
+            IMAGE_TO_DEPLOY="${REPO}:${VERSION}"
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "image_to_deploy=${IMAGE_TO_DEPLOY}" >> "$GITHUB_OUTPUT"
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+            echo "Resolved main image: ${IMAGE_TO_DEPLOY}"
+          fi
 
       - name: Build and push image
         uses: docker/build-push-action@v6
@@ -36,8 +64,8 @@ jobs:
           context: ./DEVOPS-PROJECT
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/myapp:${{ steps.version.outputs.version }}
             ${{ secrets.DOCKERHUB_USERNAME }}/myapp:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/myapp:${{ steps.meta.outputs.version }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -55,34 +83,28 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Ensure Terraform backend (S3 + DynamoDB)
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
           REGION="${{ secrets.AWS_REGION }}"
           BUCKET="ahmed-fullproject-tfstate-2026"
           TABLE="terraform-locks"
 
           if ! aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
             if [ "$REGION" = "us-east-1" ]; then
-              aws s3api create-bucket \
-                --bucket "$BUCKET" \
-                --region "$REGION"
+              aws s3api create-bucket --bucket "$BUCKET" --region "$REGION"
             else
-              aws s3api create-bucket \
-                --bucket "$BUCKET" \
-                --region "$REGION" \
+              aws s3api create-bucket --bucket "$BUCKET" --region "$REGION" \
                 --create-bucket-configuration LocationConstraint="$REGION"
             fi
 
-            aws s3api put-bucket-versioning \
-              --bucket "$BUCKET" \
+            aws s3api put-bucket-versioning --bucket "$BUCKET" \
               --versioning-configuration Status=Enabled
 
-            aws s3api put-bucket-encryption \
-              --bucket "$BUCKET" \
+            aws s3api put-bucket-encryption --bucket "$BUCKET" \
               --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
 
-            aws s3api put-public-access-block \
-              --bucket "$BUCKET" \
+            aws s3api put-public-access-block --bucket "$BUCKET" \
               --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
           fi
 
@@ -106,7 +128,9 @@ jobs:
 
       - name: Prepare SSH public key
         id: ssh_key
+        shell: bash
         run: |
+          set -euo pipefail
           if [ -n "${{ secrets.SSH_PUBLIC_KEY }}" ]; then
             {
               echo "public_key<<EOF"
@@ -122,9 +146,14 @@ jobs:
             } >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Terraform Apply (deploy this version)
+      - name: Terraform Apply (deploy)
         working-directory: TERRAFORM
+        shell: bash
         run: |
+          set -euo pipefail
+          IMAGE="${{ needs.build-and-push.outputs.image_to_deploy }}"
+          echo "Deploying image: $IMAGE"
+
           terraform apply -auto-approve \
-            -var="docker_image=${{ secrets.DOCKERHUB_USERNAME }}/myapp:${{ needs.build-and-push.outputs.version }}" \
+            -var="docker_image=$IMAGE" \
             -var="public_key=${{ steps.ssh_key.outputs.public_key }}"
