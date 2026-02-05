@@ -91,7 +91,7 @@ variable "health_check_path" {
 variable "key_name" {
   type        = string
   description = "EC2 Key Pair name to create"
-  default     = "devops-project-key"
+  default     = "devops-project-key-2026"
 }
 
 variable "public_key_path" {
