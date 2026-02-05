@@ -56,6 +56,9 @@
             Welcome, <b>{{ username }}</b>
             <span class="badge">{{ role_title }}</span>
           </div>
+          <div class="sub">
+            Server: <b>{{ hostname }}</b>
+          </div>
         </div>
 
         <a class="link-btn" href="{{ url_for('logout') }}">Logout</a>

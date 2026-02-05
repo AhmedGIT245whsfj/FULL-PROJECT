@@ -37,10 +37,16 @@ GitHub Actions (CI/CD)
    └─ Deploy via Terraform
    │
    ▼
-AWS EC2 (Docker Runtime)
+AWS Application Load Balancer (ALB)
    │
    ▼
-Flask Web Application (Public HTTP)
+Auto Scaling Group (EC2)
+   │
+   ▼
+Docker Runtime
+   │
+   ▼
+Flask Web Application (HTTP)
 ```
 
 ---
@@ -172,8 +178,11 @@ Terraform is responsible for **creating and managing AWS infrastructure**.
 
 ### Managed Resources
 
-* EC2 instance
-* Security Group
+* Application Load Balancer (ALB)
+* Target Group + Listener
+* Auto Scaling Group (EC2)
+* Launch Template
+* Security Groups (ALB + App)
 * SSH key pair
 * Networking (default VPC and subnet)
 * Remote state (S3 + DynamoDB)
@@ -188,7 +197,7 @@ Terraform is responsible for **creating and managing AWS infrastructure**.
 
 ## User Data (Bootstrap Mechanism)
 
-The EC2 instance uses **user_data** to bootstrap itself automatically on first boot.
+Each EC2 instance in the Auto Scaling Group uses **user_data** to bootstrap itself automatically on first boot.
 
 ### What user_data Does
 
@@ -210,7 +219,8 @@ The EC2 instance uses **user_data** to bootstrap itself automatically on first b
 
 ### Security Group Rules
 
-* **Inbound:** HTTP (80), optional SSH (22)
+* **ALB Inbound:** HTTP (80) from the internet
+* **App Inbound:** HTTP (80) from ALB, optional SSH (22) from your CIDR
 * **Outbound:** All traffic allowed
 
 ### Traffic Flow
@@ -218,7 +228,9 @@ The EC2 instance uses **user_data** to bootstrap itself automatically on first b
 ```
 Internet
   ↓
-AWS Security Group
+AWS Application Load Balancer
+  ↓
+App Security Group
   ↓
 EC2 Host (Port 80)
   ↓
@@ -235,8 +247,8 @@ Flask Application
 2. GitHub Actions pipeline starts
 3. Docker image is built and pushed
 4. Terraform applies infrastructure state
-5. EC2 instance is created or updated
-6. Application becomes publicly available
+5. Auto Scaling Group launches or updates EC2 instances
+6. ALB serves the application publicly
 
 ---
 
@@ -262,7 +274,7 @@ The environment is rebuilt **exactly as defined in code**, ensuring consistency 
 
 * `terraform validate`
 * `docker ps`
-* `curl localhost`
+* `curl http://<alb_dns_name>`
 * Browser and mobile access tests
 
 ---
@@ -270,6 +282,8 @@ The environment is rebuilt **exactly as defined in code**, ensuring consistency 
 ## Final System State
 
 * Fully containerized application
+* Load-balanced traffic via ALB
+* Auto Scaling Group for horizontal scaling
 * Fully automated deployment
 * Publicly accessible on AWS
 * Repeatable and reliable infrastructure
@@ -292,8 +306,8 @@ The environment is rebuilt **exactly as defined in code**, ensuring consistency 
 
 ## Future Improvements
 
-* Application Load Balancer (ALB)
-* Auto Scaling Group
+* HTTPS with ACM + HTTP to HTTPS redirect
+* Blue/green or canary deployments
 * Zero-downtime deployments
 * Kubernetes (EKS)
 * Monitoring & logging (Prometheus, Grafana)

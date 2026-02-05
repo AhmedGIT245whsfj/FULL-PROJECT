@@ -16,6 +16,24 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
+variable "asg_min_size" {
+  type        = number
+  description = "Auto Scaling Group minimum size"
+  default     = 2
+}
+
+variable "asg_max_size" {
+  type        = number
+  description = "Auto Scaling Group maximum size"
+  default     = 4
+}
+
+variable "asg_desired_capacity" {
+  type        = number
+  description = "Auto Scaling Group desired capacity"
+  default     = 2
+}
+
 variable "docker_image" {
   type        = string
   description = "Docker image to deploy in form repo/image:tag (e.g. ahmeduioueu235g/myapp:sha-abcdef1)"
@@ -62,6 +80,12 @@ variable "app_port" {
   type        = number
   description = "Port exposed on EC2"
   default     = 80
+}
+
+variable "health_check_path" {
+  type        = string
+  description = "ALB target group health check path"
+  default     = "/health"
 }
 
 variable "key_name" {

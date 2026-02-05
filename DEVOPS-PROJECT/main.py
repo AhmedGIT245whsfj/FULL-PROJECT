@@ -1,3 +1,6 @@
+import os
+import socket
+
 from flask import Flask, render_template, request, redirect, url_for, session
 
 app = Flask(__name__)
@@ -52,6 +55,10 @@ def is_logged_in() -> bool:
     return "username" in session and "role" in session
 
 
+def get_hostname() -> str:
+    return os.environ.get("HOSTNAME") or socket.gethostname()
+
+
 @app.get("/")
 def home():
     # لو داخل بالفعل يروح داشبورد
@@ -101,7 +108,13 @@ def dashboard():
         role_title=data["title"],
         image_path=data["image_path"],
         roadmap=data["roadmap"],
+        hostname=get_hostname(),
     )
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "hostname": get_hostname()}, 200
 
 
 @app.get("/logout")

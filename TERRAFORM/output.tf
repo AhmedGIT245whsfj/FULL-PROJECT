@@ -1,7 +1,11 @@
-output "instance_public_ip" {
-  value = aws_instance.app.public_ip
+output "alb_dns_name" {
+  value = aws_lb.app.dns_name
 }
 
 output "app_url" {
-  value = "http://${aws_instance.app.public_ip}:${var.app_port}"
+  value = "http://${aws_lb.app.dns_name}"
+}
+
+output "asg_name" {
+  value = aws_autoscaling_group.app.name
 }
