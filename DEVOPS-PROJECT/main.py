@@ -50,6 +50,120 @@ ROLE_DATA = {
     },
 }
 
+INTERVIEW_PACKS = {
+    "sysadmin": {
+        "sections": [
+            {
+                "title": "Linux & OS",
+                "questions": [
+                    "Explain the difference between hard links and soft links.",
+                    "How do you check running processes and resource usage on a Linux server?",
+                    "What is systemd and how do you manage services?",
+                    "What are /etc/passwd and /etc/shadow used for?",
+                    "How do you identify and clean up disk space issues?",
+                    "What is an inode and why does it matter?",
+                ],
+            },
+            {
+                "title": "Networking",
+                "questions": [
+                    "Explain TCP vs UDP. When would you choose each?",
+                    "How does DNS resolution work and how do you troubleshoot it?",
+                    "What is CIDR and how do you calculate subnets?",
+                    "How do you check open ports and active connections?",
+                    "What is NAT and why is it used?",
+                    "How do you trace network routes and latency?",
+                ],
+            },
+            {
+                "title": "Security, Ops, and Reliability",
+                "questions": [
+                    "What are the benefits of SSH key-based auth over passwords?",
+                    "How do you apply OS updates safely on production servers?",
+                    "Explain log rotation and how to implement it.",
+                    "What is least privilege and how do you enforce it?",
+                    "How would you design a backup and restore plan?",
+                    "What monitoring signals are critical for a Linux host?",
+                ],
+            },
+        ]
+    },
+    "developer": {
+        "sections": [
+            {
+                "title": "Programming Fundamentals",
+                "questions": [
+                    "Explain OOP vs functional programming with examples.",
+                    "What is Big-O and how do you analyze complexity?",
+                    "What is a REST API and which HTTP verbs are common?",
+                    "How do you handle exceptions and errors cleanly?",
+                    "Explain the difference between unit and integration tests.",
+                    "What is the difference between INNER JOIN and LEFT JOIN?",
+                ],
+            },
+            {
+                "title": "Python & Flask",
+                "questions": [
+                    "What is WSGI and how does Flask run on a server?",
+                    "Describe Flask’s request lifecycle.",
+                    "How do you manage secrets and environment variables?",
+                    "How would you structure a medium-size Flask project?",
+                    "What’s the difference between sessions and cookies?",
+                    "How do you validate user input safely?",
+                ],
+            },
+            {
+                "title": "Design & Dev Practices",
+                "questions": [
+                    "How do you design pagination for an API?",
+                    "What is caching and when should you use it?",
+                    "Explain git merge vs rebase and when to use each.",
+                    "How do you approach code reviews?",
+                    "What is CI and how does it improve quality?",
+                    "How do you handle concurrency in web apps?",
+                ],
+            },
+        ]
+    },
+    "devops": {
+        "sections": [
+            {
+                "title": "CI/CD & Delivery",
+                "questions": [
+                    "What is the difference between CI and CD?",
+                    "How do you design a safe rollback strategy?",
+                    "Explain blue/green vs canary deployments.",
+                    "How do you version and tag Docker images?",
+                    "How do you manage secrets in a pipeline?",
+                    "How do you triage failed CI/CD runs?",
+                ],
+            },
+            {
+                "title": "Containers & Runtime",
+                "questions": [
+                    "What is the difference between an image and a container?",
+                    "What are best practices for writing Dockerfiles?",
+                    "How do you reduce Docker image size?",
+                    "What is a container health check and why use it?",
+                    "How do you debug container networking issues?",
+                    "Docker Compose vs Kubernetes: when to choose each?",
+                ],
+            },
+            {
+                "title": "Cloud, IaC, and Observability",
+                "questions": [
+                    "What is Infrastructure as Code and why use it?",
+                    "How does Terraform state work and why is locking needed?",
+                    "What is drift and how do you detect it?",
+                    "ALB vs NLB: what are the key differences?",
+                    "What are the three pillars of observability?",
+                    "How would you set up auto-scaling safely?",
+                ],
+            },
+        ]
+    },
+}
+
 
 def is_logged_in() -> bool:
     return "username" in session and "role" in session
@@ -110,6 +224,49 @@ def dashboard():
         roadmap=data["roadmap"],
         hostname=get_hostname(),
     )
+
+
+@app.get("/interview")
+def interview_prep():
+    if not is_logged_in():
+        return redirect(url_for("login"))
+
+    requested_role = (request.args.get("role") or "").strip()
+    role = requested_role if requested_role in INTERVIEW_PACKS else session.get("role")
+    pack = INTERVIEW_PACKS.get(role)
+    role_data = ROLE_DATA.get(role)
+
+    if not pack or not role_data:
+        session.clear()
+        return redirect(url_for("login"))
+
+    return render_template(
+        "interview.html",
+        username=session.get("username"),
+        role=role,
+        role_title=role_data["title"],
+        sections=pack["sections"],
+    )
+
+
+@app.get("/api/interview")
+def interview_api():
+    if not is_logged_in():
+        return {"error": "unauthorized"}, 401
+
+    requested_role = (request.args.get("role") or "").strip()
+    role = requested_role if requested_role in INTERVIEW_PACKS else session.get("role")
+    pack = INTERVIEW_PACKS.get(role)
+    role_data = ROLE_DATA.get(role)
+
+    if not pack or not role_data:
+        return {"error": "unknown role"}, 400
+
+    return {
+        "role": role,
+        "title": role_data["title"],
+        "sections": pack["sections"],
+    }, 200
 
 
 @app.get("/health")

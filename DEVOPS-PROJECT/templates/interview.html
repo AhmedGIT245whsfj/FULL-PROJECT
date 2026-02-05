@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Interview Prep</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="topbar">
+        <div>
+          <h1>Interview Prep</h1>
+          <div class="sub">
+            {{ role_title }} questions tailored for your role
+          </div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <a class="link-btn" href="{{ url_for('dashboard') }}">Dashboard</a>
+          <a class="link-btn" href="{{ url_for('logout') }}">Logout</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>How to Use</h2>
+        <ul>
+          <li>Read each section and prepare short, clear answers.</li>
+          <li>Use real examples from your projects or labs.</li>
+          <li>Explain tradeoffs and ask clarifying questions.</li>
+        </ul>
+      </div>
+
+      <div style="display:grid; gap:16px; margin-top:16px;">
+        {% for section in sections %}
+          <div class="card">
+            <h2>{{ section.title }}</h2>
+            <ol>
+              {% for q in section.questions %}
+                <li>{{ q }}</li>
+              {% endfor %}
+            </ol>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </body>
+</html>
