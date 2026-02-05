@@ -143,10 +143,14 @@ jobs:
               echo "EOF"
             } >> "$GITHUB_OUTPUT"
           else
-            ssh-keygen -t rsa -b 4096 -f /tmp/ci_deploy_key -N "" -C "ci-deploy"
+            PUB_FILE="TERRAFORM/keys/devops-project.pub"
+            if [ ! -f "$PUB_FILE" ]; then
+              echo "Missing $PUB_FILE" >&2
+              exit 1
+            fi
             {
               echo "public_key<<EOF"
-              cat /tmp/ci_deploy_key.pub
+              cat "$PUB_FILE"
               echo "EOF"
             } >> "$GITHUB_OUTPUT"
           fi

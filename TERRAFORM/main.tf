@@ -27,6 +27,10 @@ data "aws_ami" "ubuntu" {
 resource "aws_key_pair" "deployer" {
   key_name   = var.key_name
   public_key = (length(trimspace(var.public_key)) > 0 ? trimspace(var.public_key) : file(pathexpand(var.public_key_path)))
+
+  lifecycle {
+    create_before_destroy = false
+  }
 }
 
 locals {
